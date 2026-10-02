@@ -1,0 +1,68 @@
+{
+  "name": "@nlabs/alfred",
+  "version": "0.1.0",
+  "description": "A living AI assistant shell with app-supplied knowledge and connectivity.",
+  "type": "module",
+  "license": "MIT",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "files": [
+    "lib",
+    "README.md",
+    "LICENSE",
+    "docs/assets"
+  ],
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js"
+    },
+    "./styles.css": "./lib/styles.css"
+  },
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nitrogenlabs/alfred.git"
+  },
+  "homepage": "https://alfred.nitrogenx.co",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "start": "npm run start --prefix examples/basic",
+    "build": "lex compile --remove --config tsconfig.build.json && node scripts/assets.mjs",
+    "test": "lex test --config vitest.config.mts",
+    "typecheck": "tsc --noEmit",
+    "lint": "lex lint --maxWarnings 0",
+    "update": "lex update --interactive",
+    "prepublishOnly": "npm test && npm run build",
+    "verify:package": "node scripts/verify-package.mjs",
+    "test:e2e": "playwright test"
+  },
+  "peerDependencies": {
+    "@nlabs/arkhamjs": "^3.31.14",
+    "@nlabs/arkhamjs-utils-react": "^3.32.12",
+    "@nlabs/gothamui": "^1.11.2",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@nlabs/arkhamjs": "3.31.14",
+    "@nlabs/arkhamjs-utils-react": "3.32.12",
+    "@nlabs/gothamui": "1.11.2",
+    "@nlabs/lex": "2.0.3",
+    "@playwright/test": "^1.63.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.3",
+    "@vitest/coverage-v8": "4.1.11",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "jsdom": "^28.0.0",
+    "prettier": "^3.9.6",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "typescript": "^7.0.2",
+    "vitest": "4.1.11"
+  }
+}

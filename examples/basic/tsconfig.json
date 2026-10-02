@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "allowJs": false,
+    "allowSyntheticDefaultImports": true,
+    "emitDeclarationOnly": true,
+    "esModuleInterop": true,
+    "inlineSourceMap": true,
+    "jsx": "react-jsx",
+    "lib": [
+      "ESNext",
+      "dom"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noUnusedLocals": false,
+    "pretty": true,
+    "removeComments": true,
+    "skipLibCheck": true,
+    "target": "ESNext",
+    "types": [
+      "vitest/globals",
+      "@testing-library/jest-dom",
+      "node"
+    ]
+  },
+  "include": [
+    "./src"
+  ],
+  "exclude": [
+    "./lib",
+    "./node_modules"
+  ]
+}

@@ -1,0 +1,3 @@
+import lexConfig from '@nlabs/lex/eslint.config.mjs';
+import hooks from 'eslint-plugin-react-hooks';
+export default [...lexConfig,{ignores:['lib/**','coverage/**']},{plugins:{'standard-hooks':hooks},rules:{'react-hooks/rules-of-hooks':'off','standard-hooks/rules-of-hooks':'error','custom-sort/sort-imports':'off','no-nested-ternary':'off'}},{files:['**/*.test.ts','**/*.test.tsx','src/testSetup.ts'],rules:{'import/no-extraneous-dependencies':'off'}},{files:['src/components/AlfredLogo/AlfredLogo.tsx','src/components/AlfredLogo/ribbon.ts','src/components/AlfredWaveform/waveform.ts'],rules:{'no-mixed-operators':'off'}}];
