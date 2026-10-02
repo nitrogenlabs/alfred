@@ -1,3 +1,9 @@
+export interface AlfredConfiguration {
+  /** Requested response language (BCP 47 tag). Defaults to en-US. */
+  language?: string;
+  /** Assistant display name. Defaults to Alfred. */
+  name?: string;
+}
 export interface Source {
   title: string;
   url: string;
@@ -21,7 +27,7 @@ export interface FaqItem {
   question: string;
   sources: Source[];
 }
-export interface RequestContext {
+export interface RequestContext extends AlfredConfiguration {
   context: string;
   knowledge?: unknown;
   signal: AbortSignal;
@@ -47,7 +53,7 @@ export interface AlfredConnectivity {
   loadFaqs?: (request: RequestContext) => Promise<FaqItem[]>;
   submitSupport?: (request: SupportRequest) => Promise<TicketReceipt>;
 }
-export interface AssistantState {
+export interface AssistantState extends AlfredConfiguration {
   context: string;
   knowledge?: unknown;
   draft?: Draft;
@@ -69,7 +75,7 @@ export interface AlfredBranding {
   welcomeDescription?: string;
   supportSuccess?: string;
 }
-export interface AlfredProps {
+export interface AlfredProps extends AlfredConfiguration {
   branding?: AlfredBranding;
   connectivity: AlfredConnectivity;
   context: string;

@@ -9,3 +9,15 @@ test('installed tarball uses host adapters and packaged assets',async({page,isMo
  expect(await page.locator('.nx-ask-brand-logo img').evaluate((img:HTMLImageElement)=>img.naturalWidth)).toBeGreaterThan(0);
  expect(nitrogenCalls).toEqual([]);expect(errors).toEqual([]);
 });
+
+
+test('configures name and language in an installed consumer', async ({page}) => {
+  await page.goto('/?name=Jeeves&language=en-GB');
+  await page.getByRole('button', {name: 'Open Ask Jeeves'}).click();
+  await expect(page.locator('.nx-ask-panel')).toHaveAttribute('lang', 'en-GB');
+  await expect(page.getByRole('heading', {name: 'ask jeeves'})).toBeVisible();
+  await page.getByRole('button', {name: 'Ask about our product'}).click();
+  await expect(page.getByRole('log')).toContainText('Jeeves (en-GB)');
+  await expect(page.getByPlaceholder('Ask Jeeves…')).toBeVisible();
+  await page.getByRole('button', {name: 'Close Ask Jeeves'}).click();
+});

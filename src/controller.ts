@@ -1,5 +1,6 @@
 import type {FluxFramework} from '@nlabs/arkhamjs';
 import type {
+  AlfredConfiguration,
   AlfredConnectivity,
   AssistantState,
   Draft,
@@ -8,7 +9,8 @@ import type {
 
 export const initialAssistant = (
   context = '',
-  knowledge?: unknown
+  knowledge?: unknown,
+  {language = 'en-US', name = 'Alfred'}: AlfredConfiguration = {}
 ): AssistantState => ({
   context,
   error: '',
@@ -16,7 +18,9 @@ export const initialAssistant = (
   faqStatus: 'idle',
   faqs: [],
   knowledge,
+  language,
   locked: false,
+  name,
   status: 'idle',
   turns: []
 });
@@ -44,7 +48,8 @@ export const safeSources = (sources: unknown): Source[] => {
 export const createAlfredController = (
   flux: FluxFramework,
   instanceId: string,
-  connectivity: AlfredConnectivity
+  connectivity: AlfredConnectivity,
+  {language = 'en-US', name = 'Alfred'}: AlfredConfiguration = {}
 ) => {
   const key = `alfred:${instanceId}`;
   const event = `ALFRED_CHANGED:${instanceId}`;
@@ -77,6 +82,8 @@ export const createAlfredController = (
       context: state.context,
       generation,
       knowledge,
+      language,
+      name,
       request,
       signal: request.signal
     };
@@ -120,6 +127,8 @@ export const createAlfredController = (
             text: turn.text.slice(0, 2500)
           })),
           knowledge: operation.knowledge,
+          language: operation.language,
+          name: operation.name,
           question: question.trim(),
           signal: operation.signal
         });
@@ -155,7 +164,7 @@ export const createAlfredController = (
     clear: async (): Promise<void> => {
       if(!disposed && state.status === 'idle') {
         cancel();
-        await write(initialAssistant(state.context, knowledge));
+        await write(initialAssistant(state.context, knowledge, {language, name}));
       }
     },
     dispose: () => {
@@ -196,6 +205,8 @@ export const createAlfredController = (
         const items = await connectivity.loadFaqs({
           context: operation.context,
           knowledge: operation.knowledge,
+          language: operation.language,
+          name: operation.name,
           signal: operation.signal
         });
         if(
@@ -264,7 +275,10 @@ export const createAlfredController = (
       const resuming = disposed || firstActivation;
       firstActivation = false;
       disposed = false;
-      if(state.context === context && knowledge === nextKnowledge) {
+      if(
+        state.context === context && knowledge === nextKnowledge &&
+        state.language === language && state.name === name
+      ) {
         if(
           resuming &&
           (state.status !== 'idle' || state.faqStatus === 'loading')
@@ -279,7 +293,7 @@ export const createAlfredController = (
       }
       knowledge = nextKnowledge;
       cancel();
-      void write(initialAssistant(context, nextKnowledge));
+      void write(initialAssistant(context, nextKnowledge, {language, name}));
     },
     submit: async (confirmed: boolean): Promise<void> => {
       if(
@@ -313,6 +327,8 @@ export const createAlfredController = (
           context: operation.context,
           draft,
           knowledge: operation.knowledge,
+          language: operation.language,
+          name: operation.name,
           requestId,
           signal: operation.signal
         });

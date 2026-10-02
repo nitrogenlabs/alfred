@@ -10,14 +10,17 @@ import {AlfredWaveform} from '../AlfredWaveform/AlfredWaveform.js';
 import type {CSSProperties, FormEvent} from 'react';
 import type {AlfredProps, Draft} from '../../types.js';
 
-export const Alfred = ({branding = {}, connectivity, context, instanceId, knowledge, theme}: AlfredProps) => {
+export const Alfred = ({branding = {}, connectivity, context, instanceId, knowledge, language = 'en-US', name = 'Alfred', theme}: AlfredProps) => {
   const flux = useFlux();
   const generatedId = useId();
   const id = instanceId || generatedId;
   const titleId = `alfred-title-${generatedId}`;
   const descriptionId = `alfred-description-${generatedId}`;
   const questionId = `alfred-question-${generatedId}`;
-  const actions = useMemo(() => createAlfredController(flux, id, connectivity), [flux, id, connectivity]);
+  const actions = useMemo(
+    () => createAlfredController(flux, id, connectivity, {language, name}),
+    [flux, id, connectivity, language, name]
+  );
   const [state, setState] = useState(actions.read);
   const styles: CSSProperties & Record<`--alfred-${string}`, string | undefined> = {
     '--alfred-accent': theme?.accent,
@@ -82,8 +85,9 @@ export const Alfred = ({branding = {}, connectivity, context, instanceId, knowle
   return (
     <>
       <Button
-        aria-label="Open Ask Alfred"
+        aria-label={`Open Ask ${name}`}
         className="nx-ask-launch"
+        lang={language}
         onBlur={() => setLauncherFocused(false)}
         onClick={() => setOpen(true)}
         onFocus={() => setLauncherFocused(true)}
@@ -97,13 +101,14 @@ export const Alfred = ({branding = {}, connectivity, context, instanceId, knowle
         </span>
         <span aria-hidden="true" className="nx-alfred-active">
           <AlfredWaveform active={!open && (launcherHovered || launcherFocused)} />
-          <span className="nx-alfred-label">ask alfred</span>
+          <span className="nx-alfred-label">ask {name.toLowerCase()}</span>
         </span>
       </Button>
       <Dialog
         aria-describedby={descriptionId}
         aria-labelledby={titleId}
         className="nx-ask-panel"
+        lang={language}
         onClose={setOpen}
         open={open}
         size="lg"
@@ -114,13 +119,13 @@ export const Alfred = ({branding = {}, connectivity, context, instanceId, knowle
             <AlfredLogo active={open} className="nx-ask-brand-logo" />
             <div>
               <DialogTitle id={titleId}>
-                ask <strong>alfred</strong>
+                ask <strong>{name.toLowerCase()}</strong>
               </DialogTitle>
-              <p id={descriptionId}>{branding.description || 'I’m Alfred, your AI assistant.'}</p>
+              <p id={descriptionId}>{branding.description || `I’m ${name}, your AI assistant.`}</p>
             </div>
           </div>
           <button
-            aria-label="Close Ask Alfred"
+            aria-label={`Close Ask ${name}`}
             className="nx-ask-close"
             onClick={() => setOpen(false)}
             type="button"
@@ -130,7 +135,7 @@ export const Alfred = ({branding = {}, connectivity, context, instanceId, knowle
         </header>
         {connectivity.loadFaqs && !support && !state.ticket ? (
           <Tabs
-            ariaLabel="Alfred views"
+            ariaLabel={`${name} views`}
             className="nx-ask-tabs"
             items={[
               {
@@ -258,7 +263,7 @@ export const Alfred = ({branding = {}, connectivity, context, instanceId, knowle
               {!state.turns.length ? (
                 <div className="nx-ask-welcome">
                   <span aria-hidden="true" className="nx-ask-mark">
-                    A.
+                    {name.charAt(0).toUpperCase()}.
                   </span>
                   <h3>{branding.welcomeTitle || 'How can I help?'}</h3>
                   <p>{branding.welcomeDescription || 'Ask a question. I’ll find answers with sources.'}</p>
@@ -280,7 +285,7 @@ export const Alfred = ({branding = {}, connectivity, context, instanceId, knowle
                 <div aria-live="polite" className="nx-ask-turns" role="log">
                   {state.turns.map((turn, index) => (
                     <article className={`nx-ask-turn nx-ask-${turn.role}`} key={index}>
-                      <strong>{turn.role === 'user' ? 'You' : 'Alfred'}</strong>
+                      <strong>{turn.role === 'user' ? 'You' : name}</strong>
                       <p>{turn.text}</p>
                       {turn.sources?.length ? (
                         <nav aria-label="Answer sources">
@@ -308,7 +313,7 @@ export const Alfred = ({branding = {}, connectivity, context, instanceId, knowle
                   id={questionId}
                   maxLength={1200}
                   onChange={(event) => setQuestion(event.target.value)}
-                  placeholder="Ask Alfred…"
+                  placeholder={`Ask ${name}…`}
                   required
                   rows={2}
                   value={question}

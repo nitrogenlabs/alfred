@@ -262,3 +262,29 @@ test('retries FAQ failure, shows empty results and queued support receipts', asy
 
   expect(document.body.textContent).toContain('Your message is saved.');
 });
+
+
+test('configures assistant identity and language without changing other instances', async () => {
+  await act(async () => root.render(
+    <Alfred connectivity={connectivity} context="custom" language="en-GB" name="Jeeves" />
+  ));
+  await click('Open Ask Jeeves');
+
+  expect(document.querySelector('.nx-ask-panel')?.getAttribute('lang')).toBe('en-GB');
+  expect(document.body.textContent).toContain('ask jeeves');
+  expect(document.body.textContent).toContain('I’m Jeeves, your AI assistant.');
+  expect(document.querySelector('textarea')?.getAttribute('placeholder')).toBe('Ask Jeeves…');
+  expect(document.querySelector('.nx-ask-mark')?.textContent?.trim()).toBe('J.');
+
+  await input('textarea', 'Hello');
+  await act(async () => document.querySelector('.nx-ask-compose')!.dispatchEvent(new Event('submit', {bubbles: true, cancelable: true})));
+
+  expect(chat.mock.calls[0][0]).toMatchObject({language: 'en-GB', name: 'Jeeves'});
+  expect(document.querySelector('.nx-ask-assistant strong')?.textContent).toBe('Jeeves');
+
+  await click('Close Ask Jeeves');
+  await act(async () => root.render(<Alfred connectivity={connectivity} context="custom" />));
+  await click('Open Ask Alfred');
+
+  expect(document.querySelector('.nx-ask-panel')?.getAttribute('lang')).toBe('en-US');
+});

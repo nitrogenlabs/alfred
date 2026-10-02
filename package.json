@@ -1,6 +1,6 @@
 {
   "name": "@nlabs/alfred",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A living AI assistant shell with app-supplied knowledge and connectivity.",
   "type": "module",
   "license": "MIT",

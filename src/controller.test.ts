@@ -247,3 +247,31 @@ test('rejects malformed adapter text and source shapes without rendering unsafe 
   expect(controller.read().ticket).toBeUndefined();
   expect(controller.read().error).toBeTruthy();
 });
+
+
+test('passes configured identity and language to every adapter and keeps defaults', async () => {
+  const {connectivity, controller, flux, chat, loadFaqs, submitSupport} = setup();
+  await controller.ask('Default');
+
+  expect(chat.mock.calls[0][0]).toMatchObject({language: 'en-US', name: 'Alfred'});
+
+  controller.dispose();
+  const custom = createAlfredController(flux, 'configured', connectivity, {language: 'en-GB', name: 'Jeeves'});
+  custom.setContext('docs');
+  await custom.ask('Hello');
+  await custom.loadFaqs();
+  await custom.prepareSupport();
+  await custom.submit(true);
+  for(const adapter of [chat, loadFaqs, submitSupport]) {
+    expect(adapter.mock.calls.at(-1)?.[0]).toMatchObject({language: 'en-GB', name: 'Jeeves'});
+  }
+  custom.dispose();
+  const changed = createAlfredController(flux, 'configured', connectivity, {language: 'fr-FR', name: 'Remy'});
+  changed.setContext('docs');
+
+  expect(changed.read().turns).toEqual([]);
+
+  await changed.ask('Bonjour');
+
+  expect(chat.mock.calls.at(-1)?.[0]).toMatchObject({language: 'fr-FR', name: 'Remy'});
+});

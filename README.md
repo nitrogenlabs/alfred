@@ -31,6 +31,8 @@ export const Assistant = () => {
     connectivity={connectivity}
     context="your-product"
     knowledge={knowledge}
+    language="en-US"
+    name="Alfred"
   />;
 };
 ```
@@ -41,7 +43,7 @@ export const Assistant = () => {
 
 Alfred does not ingest documents, choose a model, or retrieve private data. `knowledge` is optional opaque metadata/public content passed to your callbacks. Your backend chooses how to retrieve evidence and generate answers.
 
-Chat receives `{context, history, knowledge, question, signal}` and returns `{answer, sources?: [{title, url}]}`. History is bounded to the last six turns and each text is limited to 2,500 characters. Questions have a 1,200-character limit. Only HTTP(S) source links are displayed. Responses are rendered as text.
+Chat receives `{context, history, knowledge, language, name, question, signal}` and returns `{answer, sources?: [{title, url}]}`. History is bounded to the last six turns and each text is limited to 2,500 characters. Questions have a 1,200-character limit. Only HTTP(S) source links are displayed. Responses are rendered as text.
 
 For NLabs apps, implement callbacks through MetropolisJS/Rip-Hunter. Other apps can use their own SDK. Pass cancellation to your client where supported; Alfred also ignores obsolete responses.
 
@@ -65,16 +67,16 @@ export const createConnectivity = (flux: FluxFramework): AlfredConnectivity => {
     });
 
   return {
-    chat: ({context, history, knowledge, question}) =>
+    chat: ({context, history, knowledge, language, name, question}) =>
       request<{answer: string; sources?: {title: string; url: string}[]}>(
-        'chat', {context, history, knowledge, question}
+        'chat', {context, history, knowledge, language, name, question}
       ),
     // Omit loadFaqs to hide the FAQ tab.
-    loadFaqs: ({context, knowledge}) =>
-      request<FaqItem[]>('faqs', {context, knowledge}),
+    loadFaqs: ({context, knowledge, language, name}) =>
+      request<FaqItem[]>('faqs', {context, knowledge, language, name}),
     // Omit submitSupport to hide the support form.
-    submitSupport: ({confirmed, context, draft, requestId}) =>
-      request<TicketReceipt>('tickets', {confirmed, context, ...draft, requestId}),
+    submitSupport: ({confirmed, context, draft, language, name, requestId}) =>
+      request<TicketReceipt>('tickets', {confirmed, context, ...draft, language, name, requestId}),
   };
 };
 // chat: {answer, sources?: [{title, url}]}
@@ -94,9 +96,30 @@ Omit `loadFaqs` from the adapter to hide the FAQ tab. Return an array of `{id, q
 
 Omit `submitSupport` to hide the support form. `draft` includes first/last name, email, phone, company, and message. Return `{ticketNumber}` for confirmed delivery or `{queued: true}` for durable acceptance with delivery pending. A failed/ambiguous submission locks details and retains the same request ID for retry. Your backend must implement idempotency and actual durable delivery. The package does not send emails or create CRM records by itself.
 
+## Initial configuration
+
+Set `name` and `language` on each Alfred instance when you mount it:
+
+```tsx
+<Alfred
+  connectivity={connectivity}
+  context="your-product"
+  language="en-US"
+  name="Alfred"
+/>
+```
+
+Both props are optional: `name` defaults to `Alfred` and `language` to `en-US`. The name is used in the launcher, modal title, greeting, chat author, FAQ notices, input placeholder, and accessible labels. Header and launcher names remain lowercase; other copy preserves your capitalization.
+
+`language` is a BCP 47 language tag, such as `en-US` or `en-GB`. Alfred marks its UI with this language and passes `language` and `name` to every chat, FAQ, and support callback. Your backend must use the language when generating answers or loading localized FAQs. Built-in UI strings currently remain English; setting this prop does not automatically translate them or change the host application's global i18n settings.
+
+To follow your app's GothamUI language, pass `i18n.resolvedLanguage || i18n.language || 'en-US'` (where `i18n` is exported by `@nlabs/gothamui`). Use GothamUI's `useTranslation` in the host component if it must react to language changes. You can also pass your MetropolisJS app locale. Multiple assistants can have different names and languages. Changing either value clears that instance's conversation and cancels/ignores its pending requests.
+
+The exported `createAlfredController` also accepts an optional fourth argument: `{name: 'Alfred', language: 'en-US'}`.
+
 ## Branding and theme
 
-`branding` supports `description`, `email`, `prompts`, `welcomeTitle`, `welcomeDescription`, and `supportSuccess`. `theme` supports CSS values for `accent`, `header`, and `footer`. Alfred's name and default artwork remain recognizable. Import `AlfredLogo` separately to reuse the animated mark:
+`branding` supports `description`, `email`, `prompts`, `welcomeTitle`, `welcomeDescription`, and `supportSuccess`. `theme` supports CSS values for `accent`, `header`, and `footer`. The default Alfred artwork is retained when you customize the name. Import `AlfredLogo` separately to reuse the animated mark:
 
 ```tsx
 import {AlfredLogo} from '@nlabs/alfred';

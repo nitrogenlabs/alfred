@@ -15,7 +15,7 @@ export const AlfredFaq = ({
       <p role="status">Loading frequently asked questions…</p>
     ) : state.faqStatus === 'error' ? (
       <p role="status">
-        FAQs are temporarily unavailable. You can still ask Alfred.{' '}
+        FAQs are temporarily unavailable. You can still ask {state.name || 'Alfred'}.{' '}
         <button onClick={() => void actions.loadFaqs()} type="button">
           Try again
         </button>
@@ -42,7 +42,7 @@ export const AlfredFaq = ({
         title="Most asked questions"
       />
     ) : (
-      <p>No FAQs yet. Ask Alfred a question.</p>
+      <p>No FAQs yet. Ask {state.name || 'Alfred'} a question.</p>
     )}
   </div>
 );
