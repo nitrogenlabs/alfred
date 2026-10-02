@@ -31,15 +31,19 @@
     "access": "public"
   },
   "scripts": {
-    "start": "npm run start --prefix examples/basic",
     "build": "lex compile --remove --config tsconfig.build.json && node scripts/assets.mjs",
-    "test": "lex test --config vitest.config.mts",
-    "typecheck": "tsc --noEmit",
     "lint": "lex lint --maxWarnings 0",
-    "update": "lex update --interactive",
     "prepublishOnly": "npm test && npm run build",
-    "verify:package": "node scripts/verify-package.mjs",
-    "test:e2e": "playwright test"
+    "publish:major": "npm version major && npm run publish:tags && npm publish",
+    "publish:minor": "npm version minor && npm run publish:tags && npm publish",
+    "publish:patch": "npm version patch && npm run publish:tags && npm publish",
+    "publish:tags": "git push --tags && git push origin HEAD",
+    "start": "npm run start --prefix examples/basic",
+    "test": "lex test --config vitest.config.mts",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit",
+    "update": "lex update --interactive",
+    "verify:package": "node scripts/verify-package.mjs"
   },
   "peerDependencies": {
     "@nlabs/arkhamjs": "^3.31.14",

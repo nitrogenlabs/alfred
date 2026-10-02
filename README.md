@@ -150,4 +150,20 @@ npm start # opens the prepared example on localhost:3301
 
 Lex handles compilation and Vitest tests. The package ships ESM, TypeScript declarations, CSS, and local assets. Use the NitrogenX integration and installed tarball consumer to verify desktop/mobile happy paths with Playwright.
 
+## Updating and publishing
+
+`npm run update` uses Lex’s interactive dependency updater. Review and test dependency changes before committing them.
+
+For a new release from a clean, committed checkout:
+
+```sh
+npm run publish:patch # bug fixes: 0.2.0 → 0.2.1
+npm run publish:minor # features: 0.2.0 → 0.3.0
+npm run publish:major # breaking changes: 0.2.0 → 1.0.0
+```
+
+Choose one command. Each follows the GothamUI/MetropolisJS/Reaktor convention: `npm version` creates the version commit and Git tag, `publish:tags` pushes tags and the current branch, then `npm publish` runs the existing test/build gate and publishes with public access. npm may require browser/2FA authentication. `npm run publish:tags` is also available separately.
+
+If the version has already been bumped (such as the prepared `0.2.0` release), use `npm publish --access public` directly to publish that version without another bump. If npm authentication interrupts a release after the Git push, retry `npm publish` for the same version rather than rerunning the bump command.
+
 MIT. Outfit font is licensed under the SIL Open Font License; see the bundled font license.
