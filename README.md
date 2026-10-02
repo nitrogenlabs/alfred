@@ -19,8 +19,6 @@ import {useFlux} from '@nlabs/arkhamjs-utils-react';
 import {createConnectivity} from './alfredConnectivity';
 import '@nlabs/alfred/styles.css';
 
-const knowledge = {collection: 'your-public-docs'};
-
 // Mount inside your existing ArkhamJS FluxProvider.
 export const Assistant = () => {
   const flux = useFlux();
@@ -30,7 +28,6 @@ export const Assistant = () => {
     branding={{description: 'Your product assistant'}}
     connectivity={connectivity}
     context="your-product"
-    knowledge={knowledge}
     language="en-US"
     name="Alfred"
   />;
@@ -46,6 +43,61 @@ Alfred does not ingest documents, choose a model, or retrieve private data. `kno
 Chat receives `{context, history, knowledge, language, name, question, signal}` and returns `{answer, sources?: [{title, url}]}`. History is bounded to the last six turns and each text is limited to 2,500 characters. Questions have a 1,200-character limit. Only HTTP(S) source links are displayed. Responses are rendered as text.
 
 For NLabs apps, implement callbacks through MetropolisJS/Rip-Hunter. Other apps can use their own SDK. Pass cancellation to your client where supported; Alfred also ignores obsolete responses.
+
+### What does the knowledge object look like?
+
+`knowledge?: unknown` deliberately has no fixed schema. Your app and backend define its shape. It is optional: omit it if your backend selects the corpus from the authenticated app or `context`. For the MetropolisJS GraphQL adapter, use JSON-serializable values.
+
+A reference to server-managed documents is usually preferable to sending a full document corpus from the browser. Here is an **example contract for your own backend**:
+
+```tsx
+// ProductAssistant.tsx
+import {useMemo} from 'react';
+import {Alfred} from '@nlabs/alfred';
+import {useFlux} from '@nlabs/arkhamjs-utils-react';
+import {createConnectivity} from './alfredConnectivity';
+
+// Your app defines this shape; these are example fields, not Alfred options.
+type ProductKnowledge = {
+  collection: string;
+  filters: {product: string; visibility: 'public'};
+};
+
+// A module constant keeps the object identity stable across renders.
+const knowledge: ProductKnowledge = {
+  collection: 'product-docs',
+  filters: {product: 'your-product', visibility: 'public'},
+};
+
+// Mount inside your existing FluxProvider; see the complete adapter below.
+export const ProductAssistant = () => {
+  const flux = useFlux();
+  const connectivity = useMemo(() => createConnectivity(flux), [flux]);
+  return <Alfred
+    connectivity={connectivity}
+    context="your-product"
+    knowledge={knowledge}
+  />;
+};
+
+// Your custom Reaktor backend must validate this shape, map collection to an
+// allowed corpus, apply filters, retrieve matching documents and generate an
+// answer with sources. Passing the object alone does not implement retrieval.
+```
+
+| Field in this example | Meaning in your custom backend |
+| --- | --- |
+| `collection` | A reference your server maps to an allowed document corpus. |
+| `filters.product` | A product scope your retrieval implementation applies. |
+| `filters.visibility` | An example filter; the server independently enforces access. |
+
+These are example fields, not built-in Alfred options. Alfred does not interpret them, crawl URLs, upload documents, build an index or authorize a collection. The flow is: **host prop → callback → MetropolisJS action → backend validation/retrieval → answer and sources**. The complete adapter below forwards `knowledge` to chat, FAQ and support operations; your backend can use or ignore it for each operation.
+
+If your own adapter uses small public content directly, you can instead define a shape such as `{documents: [{title: 'Getting started', text: 'Install the package…', url: 'https://example.com/docs'}]}`. Your callback/backend must explicitly read `documents`; this is also not a built-in retrieval feature. Keep provider credentials and private documents on the server. Never treat browser-provided collection IDs or filters as authorization.
+
+**NitrogenX’s current integration:** the host omits `knowledge`. The server loads its maintained corpus and uses `context` to focus source selection. Its current chat parser does not consume the `knowledge` field, so sending `{collection: ...}` to the public `api.reaktor.io` deployment does not select or create a corpus. A custom knowledge contract requires backend implementation and configuration.
+
+`context` is the separate string that identifies the assistant’s focus. Define `knowledge` outside the component, or use `useMemo` keyed by product/collection changes. A new object on every render resets the conversation; changing either context or knowledge identity clears previous turns and ignores obsolete results.
 
 ### A complete backend adapter
 
