@@ -49,13 +49,13 @@ For NLabs apps, implement callbacks through MetropolisJS/Rip-Hunter. Other apps 
 
 ### A complete backend adapter
 
-Save this as `alfredConnectivity.ts`. MetropolisJS sends GraphQL operations through Rip-Hunter to Reaktor’s assistant API. Set the endpoint to your Reaktor deployment and configure the host origin and knowledge on the server. The browser does not send provider keys. Alfred itself remains transport-independent; this host adapter supplies the Reaktor connection.
+Save this as `alfredConnectivity.ts`. The MetropolisJS assistant action sends GraphQL operations through Rip-Hunter to Reaktor’s assistant API. Configure `app.api.public` for your Reaktor deployment and configure the host origin and knowledge on the server. The browser does not send provider keys. Alfred itself remains transport-independent; this host adapter supplies the Reaktor connection.
 
 ```ts
-// alfredConnectivity.ts — your app's Reaktor GraphQL adapter
-import {getGraphql} from '@nlabs/metropolisjs/utils';
+// alfredConnectivity.ts — your app's MetropolisJS adapter
+import {createAction} from '@nlabs/metropolisjs/utils';
 import type {FluxFramework} from '@nlabs/arkhamjs';
-import type {AlfredConnectivity, FaqItem, TicketReceipt} from '@nlabs/alfred';
+import type {AlfredConnectivity} from '@nlabs/alfred';
 
 // Optional metadata keeps this adapter compatible with Alfred 0.1 and 0.2.
 type Identity = {language?: string; name?: string};
@@ -63,42 +63,27 @@ type ChatInput = Parameters<AlfredConnectivity['chat']>[0] & Identity;
 type FaqInput = Parameters<NonNullable<AlfredConnectivity['loadFaqs']>>[0] & Identity;
 type SupportInput = Parameters<NonNullable<AlfredConnectivity['submitSupport']>>[0] & Identity;
 
+// Configure app.api.public in your Metropolis environment configuration:
+// app: {api: {public: 'https://api.reaktor.io'}}
+// Requires a MetropolisJS release that includes the assistant action.
 export const createConnectivity = (flux: FluxFramework): AlfredConnectivity => {
-  // Configure your Reaktor GraphQL endpoint in the host app.
-  const endpoint = 'https://api.reaktor.io';
-  const request = async <T>(
-    operation: 'chat' | 'faqs' | 'submitSupport', input: unknown
-  ): Promise<T> => {
-    const type = operation === 'faqs' ? 'query' : 'mutation';
-    const result = await getGraphql(flux, endpoint, false, {
-      query: type + ' Assistant($input: JSONObject!) { assistant { '
-        + operation + '(input: $input) } }',
-      variables: {input},
-    }, {queueOffline: false});
-    const data = (result.assistant as Record<string, T> | undefined)?.[operation];
-    if(!data) throw new Error('Invalid assistant response');
-    return data;
-  };
-
+  const assistant = createAction('assistant', flux);
   return {
     chat: ({context, history, knowledge, language, name, question}: ChatInput) =>
-      request<{answer: string; sources?: {title: string; url: string}[]}>(
-        'chat', {context, history, knowledge, language, name, question}
-      ),
+      assistant.chat({context, history, knowledge, language, name, question}),
     // Omit loadFaqs to hide the FAQ tab.
-    loadFaqs: async ({context, language, name}: FaqInput) =>
-      (await request<{items: FaqItem[]}>('faqs', {context, language, name})).items,
+    loadFaqs: async ({context, knowledge, language, name}: FaqInput) =>
+      (await assistant.faqs({context, knowledge, language, name})).items,
     // Omit submitSupport to hide the support form.
-    submitSupport: ({confirmed, context, draft, language, name, requestId}: SupportInput) =>
-      request<TicketReceipt>('submitSupport', {
-        ...draft, confirmed, context, language, name, requestId,
+    submitSupport: ({confirmed, context, draft, knowledge, language, name, requestId}: SupportInput) =>
+      assistant.submitSupport({
+        ...draft, confirmed, context, knowledge, language, name, requestId,
       }),
   };
 };
-// Reaktor schema: Query.assistant.faqs(input: JSONObject!): JSONObject!
-// Mutation.assistant.chat / submitSupport(input: JSONObject!): JSONObject!
-// Chat: {answer, sources?: [{title, url}]}; FAQs: {items: [...]}
-// Support: {ticketNumber} or {queued: true}.
+// MetropolisJS owns the GraphQL requests, scoped Flux state and success/error events.
+// Listen with flux.on(ASSISTANT_CONSTANTS.CHAT_SUCCESS, handler).
+// Import ASSISTANT_CONSTANTS from @nlabs/metropolisjs/stores.
 // Host credentials and knowledge authorization stay on the server.
 ```
 
