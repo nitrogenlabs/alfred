@@ -65,7 +65,7 @@ type SupportInput = Parameters<NonNullable<AlfredConnectivity['submitSupport']>>
 
 // Configure app.api.public in your Metropolis environment configuration:
 // app: {api: {public: 'https://api.reaktor.io'}}
-// Requires a MetropolisJS release that includes the assistant action.
+// Requires @nlabs/metropolisjs 1.6.0 or later.
 export const createConnectivity = (flux: FluxFramework): AlfredConnectivity => {
   const assistant = createAction('assistant', flux);
   return {
