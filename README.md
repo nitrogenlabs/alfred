@@ -7,37 +7,35 @@ Built with React 19, GothamUI, and ArkhamJS. Includes the flowing translucent Al
 ## Install
 
 ```sh
-npm install @nlabs/alfred @nlabs/gothamui @nlabs/arkhamjs @nlabs/arkhamjs-utils-react react react-dom
+npm install @nlabs/alfred @nlabs/gothamui @nlabs/arkhamjs @nlabs/arkhamjs-utils-react @nlabs/metropolisjs react react-dom
 ```
 
 Use your existing GothamUI/ArkhamJS provider and Tailwind v4 setup. Alfred reads the Flux instance with `useFlux`, so mount it within `FluxProvider` from `@nlabs/arkhamjs-utils-react`. Do not create a second store when your app already supplies one. Initialize GothamUI’s exported `i18n` with `initReactI18next` if your app does not already initialize it (see `examples/basic/src/index.tsx`). Import Alfred's CSS after GothamUI/base styles:
 
 ```tsx
+import {useMemo} from 'react';
 import {Alfred} from '@nlabs/alfred';
-import type {AlfredConnectivity} from '@nlabs/alfred';
+import {useFlux} from '@nlabs/arkhamjs-utils-react';
+import {createConnectivity} from './alfredConnectivity';
 import '@nlabs/alfred/styles.css';
 
-const knowledge = {collection: 'public-product-docs'};
-const connectivity: AlfredConnectivity = {
-  chat: async ({context, history, knowledge, question, signal}) => {
-    // Your SDK calls your backend. No provider keys belong in browser code.
-    return myClient.ask({context, history, knowledge, question, signal});
-  },
-};
+const knowledge = {collection: 'your-public-docs'};
 
-// Inside your application's existing providers:
-<Alfred
-  branding={{
-    description: 'I’m Alfred, your product assistant.',
-    prompts: ['What can you help me with?', 'How do I get started?'],
-  }}
-  connectivity={connectivity}
-  context="my-product"
-  knowledge={knowledge}
-/>
+// Mount inside your existing ArkhamJS FluxProvider.
+export const Assistant = () => {
+  const flux = useFlux();
+  const connectivity = useMemo(() => createConnectivity(flux), [flux]);
+
+  return <Alfred
+    branding={{description: 'Your product assistant'}}
+    connectivity={connectivity}
+    context="your-product"
+    knowledge={knowledge}
+  />;
+};
 ```
 
-`myClient` above is your own backend client. Keep `connectivity` and `knowledge` referentially stable (module constants or `useMemo`) so rendering does not reset the conversation. Changing `context` or knowledge identity clears previous context and cancels/ignores its pending results. Use distinct `instanceId` values for multiple assistants; omitted IDs are generated automatically.
+`createConnectivity` is defined below in your app, not exported by Alfred. Keep `connectivity` and `knowledge` referentially stable (module constants or `useMemo`) so rendering does not reset the conversation. Changing `context` or knowledge identity clears previous context and cancels/ignores its pending results. Use distinct `instanceId` values for multiple assistants; omitted IDs are generated automatically.
 
 ## Knowledge and connectivity
 
@@ -47,28 +45,54 @@ Chat receives `{context, history, knowledge, question, signal}` and returns `{an
 
 For NLabs apps, implement callbacks through MetropolisJS/Rip-Hunter. Other apps can use their own SDK. Pass cancellation to your client where supported; Alfred also ignores obsolete responses.
 
-### Optional FAQs
+### A complete backend adapter
 
-```tsx
-const connectivity: AlfredConnectivity = {
-  chat: request => myClient.ask(request),
-  loadFaqs: async ({context, signal}) => myClient.faqs({context, signal}),
+Save this as `alfredConnectivity.ts`. This example uses MetropolisJS, which sends JSON through Rip-Hunter. Other apps can replace it with their existing SDK. The same-origin `/api/assistant/*` routes are examples **you must implement on your server or replace with your existing endpoints**; they are not supplied by Alfred. Your backend retrieves knowledge, calls your model, and creates support tickets. Keep provider keys on the server.
+
+```ts
+// alfredConnectivity.ts — your app's backend adapter
+import {restRequest} from '@nlabs/metropolisjs';
+import type {FluxFramework} from '@nlabs/arkhamjs';
+import type {AlfredConnectivity, FaqItem, TicketReceipt} from '@nlabs/alfred';
+
+export const createConnectivity = (flux: FluxFramework): AlfredConnectivity => {
+  // Example same-origin routes: implement these on YOUR server.
+  const request = <T>(path: string, data: unknown): Promise<T> =>
+    restRequest<T>(flux, '/api/assistant/' + path, 'POST', data, {
+      cache: false,
+      queueOffline: false,
+      timeout: 25000,
+    });
+
+  return {
+    chat: ({context, history, knowledge, question}) =>
+      request<{answer: string; sources?: {title: string; url: string}[]}>(
+        'chat', {context, history, knowledge, question}
+      ),
+    // Omit loadFaqs to hide the FAQ tab.
+    loadFaqs: ({context, knowledge}) =>
+      request<FaqItem[]>('faqs', {context, knowledge}),
+    // Omit submitSupport to hide the support form.
+    submitSupport: ({confirmed, context, draft, requestId}) =>
+      request<TicketReceipt>('tickets', {confirmed, context, ...draft, requestId}),
+  };
 };
+// chat: {answer, sources?: [{title, url}]}
+// faqs: [{id, question, answer, sources: [{title, url}]}]
+// tickets: {ticketNumber} or {queued: true}
+// Your server retrieves knowledge, calls the model, and creates tickets.
+// Implement idempotency and durable delivery for support requests.
 ```
 
-FAQ results are `{id, question, answer, sources: [{title, url}]}` objects. The FAQ tab is hidden when `loadFaqs` is omitted. Loading failures expose a retry; up to 15 items are displayed.
+This adapter does not forward `AbortSignal` to the HTTP client. Alfred still ignores obsolete responses; forward each callback's `signal` if your client supports cancellation.
+
+### Optional FAQs
+
+Omit `loadFaqs` from the adapter to hide the FAQ tab. Return an array of `{id, question, answer, sources: [{title, url}]}`. Loading failures expose a retry; up to 15 items are displayed. If your server wraps the array (for example `{items: [...]}`), unwrap it in your callback.
 
 ### Optional support
 
-```tsx
-const connectivity: AlfredConnectivity = {
-  chat: request => myClient.ask(request),
-  submitSupport: ({context, draft, requestId, confirmed, signal}) =>
-    myClient.createTicket({context, ...draft, requestId, confirmed, signal}),
-};
-```
-
-`draft` includes first/last name, email, phone, company, and message. Return `{ticketNumber}` for confirmed delivery or `{queued: true}` for durable acceptance with delivery pending. A failed/ambiguous submission locks details and retains the same request ID for retry. Your backend must implement idempotency and actual durable delivery. The package does not send emails or create CRM records by itself. Without `submitSupport`, the form is hidden.
+Omit `submitSupport` to hide the support form. `draft` includes first/last name, email, phone, company, and message. Return `{ticketNumber}` for confirmed delivery or `{queued: true}` for durable acceptance with delivery pending. A failed/ambiguous submission locks details and retains the same request ID for retry. Your backend must implement idempotency and actual durable delivery. The package does not send emails or create CRM records by itself.
 
 ## Branding and theme
 
