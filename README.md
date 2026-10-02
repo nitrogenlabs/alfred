@@ -49,22 +49,30 @@ For NLabs apps, implement callbacks through MetropolisJS/Rip-Hunter. Other apps 
 
 ### A complete backend adapter
 
-Save this as `alfredConnectivity.ts`. This example uses MetropolisJS, which sends JSON through Rip-Hunter. Other apps can replace it with their existing SDK. The same-origin `/api/assistant/*` routes are examples **you must implement on your server or replace with your existing endpoints**; they are not supplied by Alfred. Your backend retrieves knowledge, calls your model, and creates support tickets. Keep provider keys on the server.
+Save this as `alfredConnectivity.ts`. MetropolisJS sends GraphQL operations through Rip-Hunter to Reaktor’s assistant API. Set the endpoint to your Reaktor deployment and configure the host origin and knowledge on the server. The browser does not send provider keys. Alfred itself remains transport-independent; this host adapter supplies the Reaktor connection.
 
 ```ts
-// alfredConnectivity.ts — your app's backend adapter
-import {restRequest} from '@nlabs/metropolisjs';
+// alfredConnectivity.ts — your app's Reaktor GraphQL adapter
+import {getGraphql} from '@nlabs/metropolisjs/utils';
 import type {FluxFramework} from '@nlabs/arkhamjs';
 import type {AlfredConnectivity, FaqItem, TicketReceipt} from '@nlabs/alfred';
 
 export const createConnectivity = (flux: FluxFramework): AlfredConnectivity => {
-  // Example same-origin routes: implement these on YOUR server.
-  const request = <T>(path: string, data: unknown): Promise<T> =>
-    restRequest<T>(flux, '/api/assistant/' + path, 'POST', data, {
-      cache: false,
-      queueOffline: false,
-      timeout: 25000,
-    });
+  // Configure your Reaktor GraphQL endpoint in the host app.
+  const endpoint = 'https://api.reaktor.io';
+  const request = async <T>(
+    operation: 'chat' | 'faqs' | 'submitSupport', input: unknown
+  ): Promise<T> => {
+    const type = operation === 'faqs' ? 'query' : 'mutation';
+    const result = await getGraphql(flux, endpoint, false, {
+      query: type + ' Assistant($input: JSONObject!) { assistant { '
+        + operation + '(input: $input) } }',
+      variables: {input},
+    }, {queueOffline: false});
+    const data = (result.assistant as Record<string, T> | undefined)?.[operation];
+    if(!data) throw new Error('Invalid assistant response');
+    return data;
+  };
 
   return {
     chat: ({context, history, knowledge, language, name, question}) =>
@@ -72,18 +80,20 @@ export const createConnectivity = (flux: FluxFramework): AlfredConnectivity => {
         'chat', {context, history, knowledge, language, name, question}
       ),
     // Omit loadFaqs to hide the FAQ tab.
-    loadFaqs: ({context, knowledge, language, name}) =>
-      request<FaqItem[]>('faqs', {context, knowledge, language, name}),
+    loadFaqs: async ({context, language, name}) =>
+      (await request<{items: FaqItem[]}>('faqs', {context, language, name})).items,
     // Omit submitSupport to hide the support form.
     submitSupport: ({confirmed, context, draft, language, name, requestId}) =>
-      request<TicketReceipt>('tickets', {confirmed, context, ...draft, language, name, requestId}),
+      request<TicketReceipt>('submitSupport', {
+        ...draft, confirmed, context, language, name, requestId,
+      }),
   };
 };
-// chat: {answer, sources?: [{title, url}]}
-// faqs: [{id, question, answer, sources: [{title, url}]}]
-// tickets: {ticketNumber} or {queued: true}
-// Your server retrieves knowledge, calls the model, and creates tickets.
-// Implement idempotency and durable delivery for support requests.
+// Reaktor schema: Query.assistant.faqs(input: JSONObject!): JSONObject!
+// Mutation.assistant.chat / submitSupport(input: JSONObject!): JSONObject!
+// Chat: {answer, sources?: [{title, url}]}; FAQs: {items: [...]}
+// Support: {ticketNumber} or {queued: true}.
+// Host credentials and knowledge authorization stay on the server.
 ```
 
 This adapter does not forward `AbortSignal` to the HTTP client. Alfred still ignores obsolete responses; forward each callback's `signal` if your client supports cancellation.
