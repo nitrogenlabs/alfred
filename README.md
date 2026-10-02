@@ -57,6 +57,12 @@ import {getGraphql} from '@nlabs/metropolisjs/utils';
 import type {FluxFramework} from '@nlabs/arkhamjs';
 import type {AlfredConnectivity, FaqItem, TicketReceipt} from '@nlabs/alfred';
 
+// Optional metadata keeps this adapter compatible with Alfred 0.1 and 0.2.
+type Identity = {language?: string; name?: string};
+type ChatInput = Parameters<AlfredConnectivity['chat']>[0] & Identity;
+type FaqInput = Parameters<NonNullable<AlfredConnectivity['loadFaqs']>>[0] & Identity;
+type SupportInput = Parameters<NonNullable<AlfredConnectivity['submitSupport']>>[0] & Identity;
+
 export const createConnectivity = (flux: FluxFramework): AlfredConnectivity => {
   // Configure your Reaktor GraphQL endpoint in the host app.
   const endpoint = 'https://api.reaktor.io';
@@ -75,15 +81,15 @@ export const createConnectivity = (flux: FluxFramework): AlfredConnectivity => {
   };
 
   return {
-    chat: ({context, history, knowledge, language, name, question}) =>
+    chat: ({context, history, knowledge, language, name, question}: ChatInput) =>
       request<{answer: string; sources?: {title: string; url: string}[]}>(
         'chat', {context, history, knowledge, language, name, question}
       ),
     // Omit loadFaqs to hide the FAQ tab.
-    loadFaqs: async ({context, language, name}) =>
+    loadFaqs: async ({context, language, name}: FaqInput) =>
       (await request<{items: FaqItem[]}>('faqs', {context, language, name})).items,
     // Omit submitSupport to hide the support form.
-    submitSupport: ({confirmed, context, draft, language, name, requestId}) =>
+    submitSupport: ({confirmed, context, draft, language, name, requestId}: SupportInput) =>
       request<TicketReceipt>('submitSupport', {
         ...draft, confirmed, context, language, name, requestId,
       }),
