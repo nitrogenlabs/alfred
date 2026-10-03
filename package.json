@@ -39,35 +39,31 @@
     "publish:patch": "npm version patch && npm run publish:tags && npm publish",
     "publish:tags": "git push --tags && git push origin HEAD",
     "start": "npm run start --prefix examples/basic",
-    "test": "lex test --config vitest.config.mts",
-    "test:e2e": "playwright test",
+    "test": "lex test --unit",
+    "test:e2e": "lex test --e2e",
     "typecheck": "tsc --noEmit",
     "update": "lex update --interactive",
     "verify:package": "node scripts/verify-package.mjs"
   },
   "peerDependencies": {
-    "@nlabs/arkhamjs": "^3.31.14",
-    "@nlabs/arkhamjs-utils-react": "^3.32.12",
+    "@nlabs/arkhamjs": "^3.31.16",
+    "@nlabs/arkhamjs-utils-react": "^3.32.13",
     "@nlabs/gothamui": "^1.11.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
+  "overrides": {
+    "dompurify": "3.4.16"
+  },
   "devDependencies": {
-    "@nlabs/arkhamjs": "3.31.14",
-    "@nlabs/arkhamjs-utils-react": "3.32.12",
+    "@nlabs/arkhamjs": "3.31.16",
+    "@nlabs/arkhamjs-utils-react": "3.32.13",
     "@nlabs/gothamui": "1.11.2",
-    "@nlabs/lex": "2.0.3",
-    "@playwright/test": "^1.63.0",
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.3",
-    "@vitest/coverage-v8": "4.1.11",
-    "eslint": "9.39.5",
-    "eslint-plugin-react-hooks": "^7.0.1",
-    "jsdom": "^28.0.0",
-    "prettier": "^3.9.6",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
-    "typescript": "^7.0.2",
-    "vitest": "4.1.11"
+    "@nlabs/lex": "2.0.12",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
   }
 }

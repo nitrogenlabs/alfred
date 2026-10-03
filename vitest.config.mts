@@ -1,2 +1,0 @@
-import {defineConfig} from 'vitest/config';
-export default defineConfig({test:{include:['src/**/*.test.{ts,tsx}'],environment:'jsdom',testTimeout:15000,server:{deps:{inline:['@nlabs/gothamui','yet-another-react-lightbox']}},setupFiles:['./src/testSetup.ts'],coverage:{provider:'v8',enabled:true,include:['src/controller.ts','src/components/**/*.tsx','src/components/**/ribbon.ts','src/components/**/waveform.ts'],exclude:['**/*.test.*'],thresholds:{lines:90,statements:90,functions:90,branches:90}}}});

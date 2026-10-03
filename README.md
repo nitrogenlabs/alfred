@@ -201,9 +201,11 @@ node scripts/verify-consumer.mjs # installs the packed example and runs Playwrig
 npm start # opens the prepared example on localhost:3301
 ```
 
-Lex handles compilation and Vitest tests. The package ships ESM, TypeScript declarations, CSS, and local assets. Use the NitrogenX integration and installed tarball consumer to verify desktop/mobile happy paths with Playwright.
+Lex handles compilation, linting, Vitest unit tests, and Playwright browser tests. Project unit-test settings and coverage thresholds live in `lex.config.mjs`; browser-test settings live in `playwright.config.ts`. Lex supplies the underlying tools, so they do not need separate development dependencies. `npm run typecheck` uses the TypeScript compiler supplied by Lex. The package ships ESM, TypeScript declarations, CSS, and local assets. Use the NitrogenX integration and installed tarball consumer to verify desktop/mobile happy paths with Playwright.
 
 ## Updating and publishing
+
+The root package and basic example override DOMPurify to 3.4.16 because Monaco pins an affected version. As of October 3, 2026, `npm audit` still reports the unpatched [`http-cache-semantics` advisory](https://github.com/advisories/GHSA-ch52-4w7c-c8xp) through Lex's tooling dependencies. Its latest release, 4.2.0, is affected; recheck for an upstream fix when updating Lex. Avoid `npm audit fix --force`, which currently suggests downgrading Lex to 1.x and reintroduces other findings.
 
 `npm run update` uses Lex’s interactive dependency updater. Review and test dependency changes before committing them.
 
